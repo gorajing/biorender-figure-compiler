@@ -2,9 +2,13 @@
 
 A renderer-aware Figure Intent Layer that compiles scientific abstracts into editable, validated `FigureSpec` JSON.
 
+**Live demo:** https://biorender-figure-compiler.vercel.app
+
 > *I would not start by asking the LLM to draw. I would ask it to compile scientific intent into a BioRender-native figure spec, validate it, and only then hand it to the renderer/editor.*
 
 **This prototype is a contract, not a product.** `FigureSpec` is the typed interface between AI generation and BioRender's existing editor, asset library, validation surface, and export pipeline. The demo proves the contract works end-to-end against the Maude et al. 2018 NEJM CAR-T paper. A production version would plug `FigureSpec` into BioRender's real APIs.
+
+To run locally: `npm install && npm run dev`. Open http://localhost:3000, click "Load Maude 2018 CAR-T example", hover any entity chip to see the verbatim source-span highlight in the abstract pane.
 
 ---
 
