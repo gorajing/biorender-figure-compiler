@@ -6,7 +6,7 @@
 
 What internal APIs would BioRender need to expose for FigureSpec to become a real, marketplace-integrated component of the product?
 
-This document is opinionated by intent. The hosted prototype mocks every endpoint named below. The mock interfaces are typed (`src/lib/biorender-mcp.ts`) and swap-in-ready: replace the mock with a real implementation, and the prototype works against your stack without further schema work.
+This document is opinionated by intent. The hosted prototype defines the interface for icon/template resolution (`src/adapters/biorender-adapter.ts`) and includes a non-invoked mock implementation (`src/adapters/biorender-adapter-mock.ts`) that demonstrates how a real adapter would be structured. None of the endpoints proposed below are implemented today; this document describes the surface BioRender would need to expose for FigureSpec to graduate from typed contract to live integration.
 
 ---
 
@@ -219,9 +219,10 @@ For multi-user organizations, every compiled FigureSpec carries the compiling us
 
 ## Cross-references
 
-- Prototype mock: `src/lib/biorender-mcp.ts`
-- FigureSpec schema: `src/lib/schema.ts`
-- Design rationale: [../FigureSpec Schema Design Notes](../FigureSpec%20Schema%20Design%20Notes.md)
-- Product surface context: [../Product Surface Map](../Product%20Surface%20Map.md)
+- BioRenderAdapter interface: [`src/adapters/biorender-adapter.ts`](./src/adapters/biorender-adapter.ts)
+- Mock adapter (non-invoked): [`src/adapters/biorender-adapter-mock.ts`](./src/adapters/biorender-adapter-mock.ts)
+- FigureSpec schema: [`src/core/schema.ts`](./src/core/schema.ts)
+- Validator: [`src/core/validate.ts`](./src/core/validate.ts)
+- Live API extractor: [`src/adapters/extract-api.ts`](./src/adapters/extract-api.ts)
 - BioRender's public engineering: [github.com/BioRender-Team](https://github.com/BioRender-Team)
 - BioRender + Anthropic Claude for Life Sciences: [BusinessWire announcement](https://www.businesswire.com/news/home/20251023858531/en/BioRender-and-Anthropic-Partner-To-Bring-Scientific-Illustrations-to-Claude-For-Life-Sciences)

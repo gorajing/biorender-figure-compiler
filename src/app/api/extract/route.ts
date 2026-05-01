@@ -78,8 +78,9 @@ export async function POST(request: Request) {
 
 /**
  * Per-mode user-facing notice. Returned alongside the response so the client
- * doesn't have to hardcode mode-aware UI messages. When extract-api.ts and
- * extract-cli.ts ship, this is where their notices live too.
+ * doesn't have to hardcode mode-aware UI messages. The api-mode notice is
+ * null because successful live extraction speaks for itself; if the future
+ * cli-mode adapter ships, its notice would live here too.
  */
 function noticeForMode(mode: 'fixture' | 'cli' | 'api'): string | null {
   switch (mode) {

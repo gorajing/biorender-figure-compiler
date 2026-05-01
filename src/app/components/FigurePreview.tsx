@@ -24,9 +24,12 @@ type Props = {
  * Hovering any element emits its source_span up to the parent so the
  * SourceAbstract can highlight the corresponding text.
  *
- * Day 1 renderer: rectangles, labels, hover-highlight. No Fabric.js (Day 2).
- * No SVG arrows between entities (Day 2-3). No icon resolution (Day 2).
- * The point is provenance + structure, not visual polish.
+ * Prototype rendering: text-only. Entity chips are colored labels, not
+ * resolved BioRender icons. Relationships render as inline glyph rows
+ * (verb + arrow), not SVG arrows on a canvas. This is intentional. The
+ * prototype's job is to prove the FigureSpec contract; the canvas-side
+ * rendering (icon resolution via BioRender's asset library, SVG geometry,
+ * positional layout) lives downstream of the spec in a production version.
  */
 export function FigurePreview({ figureSpec, onHoverSpan }: Props) {
   return (

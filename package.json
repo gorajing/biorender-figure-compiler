@@ -2,7 +2,7 @@
   "name": "biorender-figure-compiler",
   "version": "0.1.0",
   "private": true,
-  "description": "Renderer-aware Figure Intent Layer that compiles scientific abstracts into editable, validated FigureSpec JSON for BioRender's canvas.",
+  "description": "Source-grounded FigureSpec compiler that turns paper text into an editor-ready BioRender draft. Same architectural family as BioRender Graph and ChemRender.",
   "license": "MIT",
   "author": "Jin Choi <jinchoi@u.northwestern.edu>",
   "engines": {
@@ -13,8 +13,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.40.0",
@@ -27,7 +26,6 @@
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "typescript": "^5.6.0",
-    "vitest": "^2.1.0"
+    "typescript": "^5.6.0"
   }
 }

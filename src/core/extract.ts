@@ -7,8 +7,8 @@
  *
  * Extraction modes:
  *   - 'fixture' (default): returns canonical Maude FigureSpec.
- *   - 'cli'   (planned): spawns Claude Code subprocess (uses Max quota).
- *   - 'api'   (planned): calls Anthropic SDK (requires ANTHROPIC_API_KEY).
+ *   - 'api'              : calls Anthropic SDK (requires ANTHROPIC_API_KEY). Shipped.
+ *   - 'cli'   (planned)  : spawns Claude Code subprocess (uses Max quota). Not yet wired.
  *
  * Production note: in a real deployment, the mode would be set per-environment
  * via env vars or feature flags. For the demo, the default is fixture mode
@@ -46,8 +46,9 @@ export async function extract(inputText: string): Promise<GenerateFigureResponse
       return extractFromFixture(inputText)
 
     case 'cli':
-      // Day 2-3: Claude Code CLI subprocess adapter.
-      // For now, fall through to fixture mode rather than throwing.
+      // CLI mode (Claude Code subprocess) is reserved for future work. For now,
+      // fall through to fixture mode rather than throwing so the demo never
+      // breaks if someone sets EXTRACT_MODE=cli without the adapter wired up.
       console.warn('EXTRACT_MODE=cli not yet implemented, falling back to fixture')
       return extractFromFixture(inputText)
 

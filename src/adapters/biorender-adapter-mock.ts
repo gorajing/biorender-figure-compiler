@@ -1,21 +1,23 @@
 /**
- * Mock implementation of BioRenderAdapter.
+ * Mock implementation of BioRenderAdapter — architecture demonstration only.
  *
- * Demo/dev use only. Returns hand-curated `ResolvedAsset` records for queries
- * that appear in the Maude 2018 CAR-T reference example. Used by Day 2's
- * Replace-verb UX so the demo can show alternative-icon swap behavior without
- * calling any real BioRender API.
+ * This class exists to show how a real adapter would be structured. It is NOT
+ * invoked anywhere in the current prototype runtime: the figure preview renders
+ * entity names as colored chips, and icon resolution does not run. The mock is
+ * preserved in the repo so the typed interface contract has a concrete sample
+ * implementation a reader can study.
  *
  * Production: this file should be deleted. A real BioRenderAdapter
- * implementation would replace it.
+ * implementation, calling BioRender's authenticated asset and template APIs,
+ * would replace it.
  */
 
 import type { ResolvedAsset } from '@/core/schema'
 import type { BioRenderAdapter } from './biorender-adapter'
 
 const MOCK_ASSETS: Record<string, ResolvedAsset[]> = {
-  // Hand-curated for the Maude 2018 CAR-T demo. Day 2 will populate more
-  // queries as the canvas Replace UX comes online.
+  // Hand-curated for the Maude 2018 CAR-T demo. A real adapter would query
+  // BioRender's authenticated asset library and return live results.
   'CAR-T cell': [
     { search_query: 'CAR-T cell', biorender_id: 'mock-cart-001', source: 'mocked' },
     { search_query: 'CAR-T cell', biorender_id: 'mock-cart-002', source: 'mocked' },

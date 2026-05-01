@@ -18,7 +18,8 @@ import { MAUDE_2018_FIGURESPEC } from '@/examples/maude-2018-cart-figurespec'
 
 export async function extractFromFixture(_inputText: string): Promise<GenerateFigureResponse> {
   // Single-candidate response with the canonical Maude FigureSpec selected.
-  // Live mode (extract-api.ts) would return 3 candidates with different layouts.
+  // The schema supports 1-3 candidates; live mode (extract-api.ts) defaults
+  // to 1 for latency but is tunable via EXTRACT_API_MAX_CANDIDATES.
   return {
     candidates: [MAUDE_2018_FIGURESPEC],
     selected_index: 0,

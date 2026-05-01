@@ -73,8 +73,10 @@ export async function getCachedResponse(
 /**
  * Store a GenerateFigureResponse in localStorage keyed by input text.
  *
- * No TTL: demo cache stays fresh forever. The user can clear it explicitly
- * via the "Clear cache" button (Day 2 UI work) or by changing input text.
+ * No TTL: demo cache stays fresh until the user changes input text or until
+ * the schema version bumps (which silently invalidates stale entries on
+ * subsequent reads). A `clearCache()` helper is exported below for completeness;
+ * the current UI does not surface a "Clear cache" button.
  *
  * Safe in SSR contexts (no-op if `window` is undefined).
  */
