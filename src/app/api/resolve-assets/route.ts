@@ -6,18 +6,15 @@
  * real BioRender icons. The MCP exposes two tools (search-icons and
  * search-templates); this route uses search-icons.
  *
- * Auth flow:
- *   1. POST /oauth/token with grant_type=refresh_token to get a fresh
- *      access_token (8-hour validity per BioRender's OAuth 2.1 server).
- *   2. POST /mcp with Bearer access_token, calling tools/call for
- *      search-icons. Streamable-HTTP MCP returns SSE-formatted JSON.
- *   3. Parse the SSE event, extract the inner text payload (which is
- *      itself stringified JSON containing the search results), and
- *      return a simplified shape to the client.
- *
- * Refresh on every request: the access_token is short-lived and Vercel
- * Lambda instances are stateless. Refreshing on every request adds one
- * extra HTTPS round trip (~150ms) but avoids any token-staleness bugs.
+ * Auth: uses BIORENDER_ACCESS_TOKEN directly (8-hour validity per
+ * BioRender's OAuth 2.1 server). Production Path A note: BioRender
+ * rotates refresh_tokens on every use, which is incompatible with
+ * stateless Vercel Lambdas without external shared state. For this
+ * prototype, the access_token is obtained via the OAuth flow once
+ * locally, stored in Vercel env, and used directly. When it expires,
+ * we re-do the OAuth flow and rotate the env var. A production-grade
+ * version would use Vercel KV (or equivalent) to share refresh state
+ * across Lambda instances.
  *
  * Response shape:
  *   200 { ok: true, query: string, results: ResolvedIcon[] }
@@ -37,7 +34,6 @@
 import { NextResponse } from 'next/server'
 
 const MCP_URL = 'https://mcp.services.biorender.com/mcp'
-const TOKEN_URL = 'https://mcp.services.biorender.com/oauth/token'
 
 type ResolvedIcon = {
   name: string
@@ -48,37 +44,15 @@ type ResolvedIcon = {
   height: number
 }
 
-async function refreshAccessToken(): Promise<string> {
-  const clientId = process.env.BIORENDER_OAUTH_CLIENT_ID
-  const clientSecret = process.env.BIORENDER_OAUTH_CLIENT_SECRET
-  const refreshToken = process.env.BIORENDER_OAUTH_REFRESH_TOKEN
-  if (!clientId || !clientSecret || !refreshToken) {
-    throw new Error('BioRender OAuth env vars are not configured.')
+function getAccessToken(): string {
+  const accessToken = process.env.BIORENDER_ACCESS_TOKEN
+  if (!accessToken) {
+    throw new Error(
+      'BIORENDER_ACCESS_TOKEN env var is not configured. ' +
+        'Re-run the OAuth flow locally and rotate the env var.'
+    )
   }
-
-  const body = new URLSearchParams({
-    grant_type: 'refresh_token',
-    refresh_token: refreshToken,
-    client_id: clientId,
-    client_secret: clientSecret,
-  })
-
-  const res = await fetch(TOKEN_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: body.toString(),
-  })
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => '')
-    throw new Error(`Token refresh failed: HTTP ${res.status} ${text.slice(0, 200)}`)
-  }
-
-  const json = (await res.json()) as { access_token?: string }
-  if (!json.access_token) {
-    throw new Error('Token refresh returned no access_token.')
-  }
-  return json.access_token
+  return accessToken
 }
 
 /**
@@ -212,7 +186,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const accessToken = await refreshAccessToken()
+    const accessToken = getAccessToken()
     const results = await callMcpSearchIcons(accessToken, query, perPage)
     return NextResponse.json({
       ok: true,
