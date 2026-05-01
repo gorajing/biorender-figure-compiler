@@ -36,9 +36,15 @@ export const SourceSpanSchema = z.object({
 export type SourceSpan = z.infer<typeof SourceSpanSchema>
 
 // ---------------------------------------------------------------------------
-// Resolved BioRender asset. Currently: typed interface only, with a non-invoked
-// mock in biorender-adapter-mock.ts. A production version would call BioRender's
-// real asset/template APIs (see BIORENDER_API_CONTRACT.md).
+// Resolved BioRender asset.
+//
+// Live in the deployed prototype: src/app/api/resolve-assets/route.ts calls
+// BioRender's production MCP connector at https://mcp.services.biorender.com/mcp
+// over OAuth 2.1 and returns real icon matches for any entity name. The
+// BioRenderAdapter interface in src/adapters/biorender-adapter.ts is preserved
+// as documentation of what a typed adapter would look like in production code,
+// but the live API call bypasses it for now. Future schema iteration would
+// expand this type with `entity_type` filtering for type-aware search.
 // ---------------------------------------------------------------------------
 
 export const ResolvedAssetSchema = z.object({

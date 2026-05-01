@@ -24,7 +24,7 @@ The wedge is concrete: BioRender's own Help Center notes that the Make-Your-Own-
 
 **The wedge it explores: a trust layer for AI-generated scientific figures.** BioRender already has the canvas, icons, export and editor. What's missing for the AI-generation surface is a typed intermediate object that carries source-span provenance, evidence-strength tagging and structural validation before anything reaches the renderer. `FigureSpec` is that object. The demo does not produce a finished visual figure. It produces an editor-ready structured draft: typed entities, claims, relationships, layout primitives and verbatim source-span anchors that BioRender's editor could render as editable components.
 
-**This prototype is a contract, not a product.** `FigureSpec` is the typed interface between AI generation and BioRender's existing editor, asset library, validation surface and export pipeline. The demo proves the contract works end-to-end against the Maude 2018 NEJM CAR-T paper, which is checked into the repo as a hand-authored fixture and is also reproducible live via the Anthropic API adapter. The same live extraction path was tested during prototype development against the Topalian 2012 NEJM anti-PD-1 abstract (no fixture in the repo; reproduce by pasting that abstract into the live demo). A production version would plug `FigureSpec` into BioRender's real APIs.
+**This prototype is a contract, not a product.** `FigureSpec` is the typed interface between AI generation and BioRender's existing editor, asset library, validation surface and export pipeline. The demo proves the contract works end-to-end against the Maude 2018 NEJM CAR-T paper, which is checked into the repo as a hand-authored fixture and is also reproducible live via the Anthropic API adapter. The same live extraction path has been verified on the Topalian 2012 NEJM anti-PD-1 abstract, the Mehta 2025 melanoma immunotherapy review and the Frangoul 2024 NEJM CRISPR sickle cell therapy paper (no fixtures in the repo; reproduce by pasting any of them into the live demo). The asset-resolution API call to BioRender's production MCP is wired today; the canvas-side document-creation path is the remaining production integration.
 
 To run locally: `npm install && npm run dev`. Open the URL Next.js prints (typically `http://localhost:3000`, or 3001 if 3000 is taken), click "Load Maude 2018 CAR-T example", hover any entity chip to see the verbatim source-span highlight in the abstract pane.
 
@@ -52,13 +52,14 @@ src/
     │   ├── FigurePreview.tsx       # panel cards, entity chips, hover-source-span
     │   ├── SourceAbstract.tsx      # right pane with mark-highlight on hover
     │   └── ComparisonSection.tsx   # CONSORT-style original SVG + commentary
-    ├── api/extract/route.ts        # POST /api/extract (10KB cap, mode-dispatched)
+    ├── api/extract/route.ts        # POST /api/extract (paper text -> FigureSpec)
+    ├── api/resolve-assets/route.ts # POST /api/resolve-assets (entity name -> BioRender icons via MCP)
     ├── page.tsx
     ├── layout.tsx
     └── globals.css
 ```
 
-`src/core/` is the production primitive. `src/adapters/` and `src/examples/` are demo scaffolding behind clean boundaries so they can be deleted or swapped without touching the core. The `BioRenderAdapter` interface in `src/adapters/biorender-adapter.ts` is defined and a mock implementation exists, but neither is invoked at runtime; icon resolution is mocked at the visual layer (entity names rendered as colored chips) rather than at the data layer.
+`src/core/` is the production primitive. `src/adapters/` and `src/examples/` are demo scaffolding behind clean boundaries so they can be deleted or swapped without touching the core. Note on icon resolution: `/api/resolve-assets` calls BioRender's production MCP directly via OAuth 2.1, bypassing the `BioRenderAdapter` interface (the interface and mock are preserved as documentation of what a typed asset-adapter would look like in production code).
 
 ---
 
@@ -68,17 +69,21 @@ src/
 - **Live API extraction.** `src/adapters/extract-api.ts` uses the Anthropic SDK with a two-schema pattern (compact generation schema for the model, full FigureSpec schema for storage and render) plus deterministic server-side normalization for offsets and IDs. Two Zod gates run before any output reaches the UI. Default model: `claude-sonnet-4-6`. Activated via `EXTRACT_MODE=api` and `ANTHROPIC_API_KEY` environment variables. The live demo runs in this mode.
 - **Fixture mode as the safe default.** With no environment variables set, `extract.ts` routes to `extract-fixture.ts`, which always returns the canonical Maude FigureSpec regardless of input. Even with no API key or network, the demo works.
 - **5-panel hand-authored Maude FigureSpec.** Patient population → Intervention → Mechanism → Outcome → Safety. Every entity, claim and relationship carries a verbatim source span enforced at module load by `findSpan()`.
-- **Hover-source-span interaction.** Hovering any entity chip, claim row or relationship in the figure pane highlights the corresponding verbatim text in the source abstract pane.
+- **Hover-and-click provenance.** Hovering any entity chip, claim row or relationship in the figure pane highlights the corresponding verbatim text in the source abstract pane. Clicking pins the highlight and smooth-scrolls the abstract pane to that passage. Hover previews; click navigates.
+- **Entity-type color legend.** A small horizontal legend below the figure metadata names the chip color → entity-type mapping (cell/protein blue, molecule indigo, tissue slate, process amber, concept gray) so the typed-structure pattern is self-documenting at a glance.
 - **Live validator.** `src/core/validate.ts` runs on every loaded FigureSpec. Layer 1 verifies every source span is a verbatim substring of the input. Layer 2 checks structural integrity (relationship type vs. connector style, entity reference integrity, layout-specific constraints).
 - **Scientific-reviewer voice in the validation drawer.** Warnings explain reasoning and suggest verification (not "this AI failed").
 - **Browser-only cache.** Successful extractions cache to `localStorage` keyed by SHA-256 of input + schema version, so repeat extractions of the same abstract are instant on the second view. Server route is stateless; never persists pasted text.
 - **Live BioRender MCP integration.** `src/app/api/resolve-assets/route.ts` calls BioRender's production MCP connector at `https://mcp.services.biorender.com/mcp` over OAuth 2.1 (PKCE + dynamic client registration). The "Resolve via BioRender MCP" button in the figure pane batches one request per unique entity name, displays per-chip status indicators (✓ resolved, · resolved-but-no-placeable, ! error, … loading), and surfaces top match metadata in chip tooltips. `search-icons` tool wired today; `search-templates` is a follow-up.
 
-## What is mocked
+## What is mocked or not yet shipped
 
-- **BioRender asset/template library.** The `BioRenderAdapter` interface in `src/adapters/biorender-adapter.ts` defines the contract that a production version would implement. The mock implementation in `biorender-adapter-mock.ts` exists as architecture demonstration but is not invoked anywhere in the runtime. The figure preview renders entity names as colored chips, not actual BioRender icons. A real adapter would call BioRender's authenticated asset and template APIs and resolve each entity's `asset_query` to an icon ID.
-- **Multi-candidate generation.** The schema supports up to 3 candidate FigureSpecs per response, and the UI renders `selected_index` from the response. The current API adapter ships 1 candidate by default for latency; raising to 3 is a one-line tunable (`EXTRACT_API_MAX_CANDIDATES`).
+- **Visual icon rendering on the canvas.** `/api/resolve-assets` returns real BioRender icon metadata (name, description, asset type, placeable status) but the figure pane shows status indicators on the chips, not the rendered icons themselves. Placing icons on a canvas requires BioRender's editor write API, which is not part of the public MCP. That handoff is the remaining production-integration step.
+- **Type-aware icon search.** BioRender's MCP `search-icons` tool does keyword matching on icon names and descriptions. It does not accept the entity's typed classification as a filter, so semantically wrong matches are possible (e.g., "fetal hemoglobin" (a protein) matching "Human fetus" (an anatomical icon) because both contain "fetal"). The chip type ("protein") is correct in the FigureSpec; only the asset resolution is keyword-noisy. A v2 production version would pass `entity.type` to the MCP for type-filtered search.
+- **`search-templates` tool.** The MCP exposes `search-templates` alongside `search-icons`; only `search-icons` is wired in this prototype. Templates handoff to BioRender's editor via `detailUrl` rather than direct icon placement.
+- **Multi-candidate generation.** The schema supports up to 3 candidate FigureSpecs per response, and the UI renders `selected_index`. The current API adapter ships 1 candidate by default for latency; raising to 3 is a one-line tunable (`EXTRACT_API_MAX_CANDIDATES`).
 - **CLI extraction mode.** `EXTRACT_MODE=cli` is reserved for a future Claude Code subprocess adapter that would use a Max-plan quota instead of API tokens. Currently falls through to fixture mode with a console warning.
+- **Token rotation across cold starts.** BioRender's OAuth server rotates refresh_tokens after every use (RFC 6749 standard). Stateless Vercel Lambdas can't persist the rotated refresh_token across cold starts without external shared state. The prototype stores the access_token directly in env (8-hour validity) and rotates it manually when needed. A production version would use Vercel KV or equivalent to share rotated refresh state across Lambda instances.
 
 ## What BioRender's internal APIs would unlock
 
