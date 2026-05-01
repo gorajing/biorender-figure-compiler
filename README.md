@@ -18,7 +18,7 @@ Each is its own AI-assisted Smart Import. Each renders into BioRender's existing
 
 The wedge is concrete: BioRender's own Help Center notes that the Make-Your-Own-Icon AI tools *"are intended to be used at the ICON level, and not at the whole FIGURE level"* (April 2026). Generate Protocol / Timeline / Flowchart handle specific structured shapes. Generate Custom Figure handles arbitrary paper-to-figure but produces a flat image (editability *"coming soon"* per their docs). The whole-figure-with-typed-structure slot is empty in their current AI surface. FigureSpec lives there. Same provenance discipline as their existing `Narrate AI` (auto-titles + descriptions on community-template submission, with explicit AI-generated disclaimers); same decomposition primitive as their `Smart Search` (NL query → typed topics → icons). Different input domain.
 
-A production version would call BioRender's [MCP connector](https://mcp.services.biorender.com/mcp), shipped March 17 2026, for the asset-resolution layer. The schema's `ResolvedAsset.source` enum already includes `'biorender_mcp'` as the production target.
+**The asset-resolution layer is now live.** The deployed demo calls BioRender's [MCP connector](https://mcp.services.biorender.com/mcp) (shipped March 17 2026) directly. Click "Resolve via BioRender MCP" inside the figure pane — every entity in the FigureSpec gets matched to real BioRender icons via the production `search-icons` tool over OAuth 2.1. For the Maude 2018 fixture, "tisagenlecleucel" resolves to "Anti-CD19 CAR T cell recognizing cancer cell" (group asset, placeable). The full flow: paper text → live extraction (Sonnet 4.6) → typed FigureSpec → BioRender MCP search → real icon matches displayed inline. Three production endpoints chained, no mock layers.
 
 > *I would not start by asking the LLM to draw. I would ask it to compile scientific intent into a BioRender-native figure spec, validate it, and only then hand it to the renderer/editor.*
 
@@ -72,6 +72,7 @@ src/
 - **Live validator.** `src/core/validate.ts` runs on every loaded FigureSpec. Layer 1 verifies every source span is a verbatim substring of the input. Layer 2 checks structural integrity (relationship type vs. connector style, entity reference integrity, layout-specific constraints).
 - **Scientific-reviewer voice in the validation drawer.** Warnings explain reasoning and suggest verification (not "this AI failed").
 - **Browser-only cache.** Successful extractions cache to `localStorage` keyed by SHA-256 of input + schema version, so repeat extractions of the same abstract are instant on the second view. Server route is stateless; never persists pasted text.
+- **Live BioRender MCP integration.** `src/app/api/resolve-assets/route.ts` calls BioRender's production MCP connector at `https://mcp.services.biorender.com/mcp` over OAuth 2.1 (PKCE + dynamic client registration). The "Resolve via BioRender MCP" button in the figure pane batches one request per unique entity name, displays per-chip status indicators (✓ resolved, · resolved-but-no-placeable, ! error, … loading), and surfaces top match metadata in chip tooltips. `search-icons` tool wired today; `search-templates` is a follow-up.
 
 ## What is mocked
 
@@ -107,7 +108,7 @@ The prototype mocks pieces of BioRender's stack. A production implementation wou
 | Prototype today | Production inside BioRender |
 |---|---|
 | Maude fixture loaded by button + paste-text via live API | Real abstract / protocol / grant input pasted by user |
-| `BioRenderAdapter` interface + uninvoked mock; entity names rendered as colored chips | Real `BioRenderAdapter` calling BioRender's icon and template library; chips replaced with resolved icons |
+| `BioRenderAdapter` interface + uninvoked mock; live `/api/resolve-assets` route calling BioRender's production MCP for icon search; chips show resolution status badges | Same MCP + scene-graph write API to place resolved icons on the canvas |
 | Panel-card preview rendered as HTML (text labels, no canvas geometry) | BioRender's canvas / editor renders the spec as editable scene-graph elements |
 | Source-span hover in the abstract pane | Provenance inspector / comments anchored to figure elements on the canvas |
 | Validation drawer with verbatim spans + structural checks | Scientific QA / review layer integrated into the editor sidebar |
