@@ -9,10 +9,25 @@ import type {
   SourceSpan,
 } from '@/core/schema'
 
+type ResolvedIcon = {
+  name: string
+  description: string
+  assetType: string
+  placeable: boolean
+}
+type ResolutionState =
+  | { kind: 'idle' }
+  | { kind: 'loading' }
+  | { kind: 'resolved'; matches: ResolvedIcon[] }
+  | { kind: 'error'; error: string }
+
 type Props = {
   figureSpec: FigureSpec
   onHoverSpan: (span: SourceSpan | null) => void
   onSelectSpan: (span: SourceSpan) => void
+  resolutions: Record<string, ResolutionState>
+  resolveBatchStatus: 'idle' | 'running' | 'done' | 'error'
+  onResolveAssets: () => void
 }
 
 /**
@@ -32,7 +47,14 @@ type Props = {
  * rendering (icon resolution via BioRender's asset library, SVG geometry,
  * positional layout) lives downstream of the spec in a production version.
  */
-export function FigurePreview({ figureSpec, onHoverSpan, onSelectSpan }: Props) {
+export function FigurePreview({
+  figureSpec,
+  onHoverSpan,
+  onSelectSpan,
+  resolutions,
+  resolveBatchStatus,
+  onResolveAssets,
+}: Props) {
   return (
     <div className="figure-preview">
       <h3 className="figure-eyebrow">Compiled FigureSpec draft</h3>
@@ -41,6 +63,12 @@ export function FigurePreview({ figureSpec, onHoverSpan, onSelectSpan }: Props) 
         {figureSpec.meta.audience} · {figureSpec.meta.figure_type} · {figureSpec.panels.length} panels
       </div>
       <EntityTypeLegend />
+      <ResolveAssetsBar
+        status={resolveBatchStatus}
+        onResolve={onResolveAssets}
+        resolutions={resolutions}
+        figureSpec={figureSpec}
+      />
       <div className="panels-row">
         {figureSpec.panels.map((panel) => (
           <PanelCard
@@ -48,9 +76,63 @@ export function FigurePreview({ figureSpec, onHoverSpan, onSelectSpan }: Props) 
             panel={panel}
             onHoverSpan={onHoverSpan}
             onSelectSpan={onSelectSpan}
+            resolutions={resolutions}
           />
         ))}
       </div>
+    </div>
+  )
+}
+
+/**
+ * Single-button bar that triggers batch resolution via BioRender's
+ * production MCP connector (https://mcp.services.biorender.com/mcp).
+ * Shows count of resolved/total entities once a batch completes.
+ */
+function ResolveAssetsBar({
+  status,
+  onResolve,
+  resolutions,
+  figureSpec,
+}: {
+  status: 'idle' | 'running' | 'done' | 'error'
+  onResolve: () => void
+  resolutions: Record<string, ResolutionState>
+  figureSpec: FigureSpec
+}) {
+  // Count unique entity names for the progress badge.
+  const uniqueNames = new Set<string>()
+  for (const panel of figureSpec.panels) {
+    for (const entity of panel.entities) {
+      uniqueNames.add(entity.name)
+    }
+  }
+  const total = uniqueNames.size
+  const resolved = Array.from(uniqueNames).filter(
+    (n) => resolutions[n]?.kind === 'resolved'
+  ).length
+  const errors = Array.from(uniqueNames).filter(
+    (n) => resolutions[n]?.kind === 'error'
+  ).length
+
+  return (
+    <div className="resolve-bar">
+      <button
+        className="resolve-button"
+        onClick={onResolve}
+        disabled={status === 'running'}
+        title="Calls BioRender's production MCP connector at mcp.services.biorender.com to find real BioRender icons matching each entity in this figure."
+      >
+        {status === 'running' ? 'Resolving via BioRender MCP…' : 'Resolve via BioRender MCP'}
+      </button>
+      {status !== 'idle' && (
+        <span className="resolve-summary">
+          {status === 'running' && `searching ${total} entities…`}
+          {status === 'done' && `matched ${resolved} of ${total} entities`}
+          {status === 'error' &&
+            `matched ${resolved} of ${total} (${errors} error${errors === 1 ? '' : 's'})`}
+        </span>
+      )}
     </div>
   )
 }
@@ -93,7 +175,8 @@ function PanelCard({
   panel,
   onHoverSpan,
   onSelectSpan,
-}: { panel: Panel } & RowHandlers) {
+  resolutions,
+}: { panel: Panel; resolutions: Record<string, ResolutionState> } & RowHandlers) {
   return (
     <div className="panel-card">
       <span className="panel-id">{panel.id}</span>
@@ -108,6 +191,7 @@ function PanelCard({
               entity={entity}
               onHoverSpan={onHoverSpan}
               onSelectSpan={onSelectSpan}
+              resolution={resolutions[entity.name]}
             />
           ))}
         </div>
@@ -147,16 +231,53 @@ function EntityChip({
   entity,
   onHoverSpan,
   onSelectSpan,
-}: { entity: Entity } & RowHandlers) {
+  resolution,
+}: { entity: Entity; resolution: ResolutionState | undefined } & RowHandlers) {
+  const topMatch =
+    resolution?.kind === 'resolved' && resolution.matches.length > 0
+      ? resolution.matches[0]
+      : null
+
+  // Compose the title attribute. Without resolution, just chip metadata
+  // and the click-to-jump hint. With resolution, also include the top
+  // BioRender match so the user can see what the MCP returned without
+  // breaking the chip's compact visual layout.
+  const baseTitle = `${entity.type}: ${entity.name} · click to jump to source`
+  const titleWithMatch = topMatch
+    ? `${baseTitle}\n\nBioRender match: ${topMatch.name}\n${topMatch.description}`
+    : resolution?.kind === 'error'
+      ? `${baseTitle}\n\nBioRender resolution failed: ${resolution.error}`
+      : baseTitle
+
+  // Status indicator: emoji-free, monochrome, accessible.
+  // ✓ resolved with at least one placeable match
+  // · resolved but no placeable match (still a result, just lower confidence)
+  // ! error
+  // (nothing) idle / loading
+  let statusGlyph: string | null = null
+  if (resolution?.kind === 'resolved') {
+    statusGlyph = topMatch ? '✓' : '·'
+  } else if (resolution?.kind === 'error') {
+    statusGlyph = '!'
+  } else if (resolution?.kind === 'loading') {
+    statusGlyph = '…'
+  }
+
   return (
     <span
       className={`entity-chip ${entity.type}`}
       onMouseEnter={() => onHoverSpan(entity.source_span)}
       onMouseLeave={() => onHoverSpan(null)}
       onClick={() => onSelectSpan(entity.source_span)}
-      title={`${entity.type}: ${entity.name} · click to jump to source`}
+      title={titleWithMatch}
+      data-resolution={resolution?.kind ?? 'idle'}
     >
       {entity.name}
+      {statusGlyph && (
+        <span className="entity-chip-status" aria-hidden="true">
+          {statusGlyph}
+        </span>
+      )}
     </span>
   )
 }

@@ -395,6 +395,76 @@ body {
   color: var(--c-concept);
 }
 
+/* Resolve-via-BioRender-MCP bar — sits above the panels and triggers
+   batch asset resolution against the production MCP connector. */
+.resolve-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  margin-bottom: var(--s-4);
+  padding: var(--s-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+}
+
+.resolve-button {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: var(--r-2);
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: white;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  white-space: nowrap;
+}
+
+.resolve-button:hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.resolve-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.resolve-summary {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: -0.005em;
+}
+
+/* Per-chip resolution status indicator. Sits to the right of the entity
+   name inside the chip. Color follows the chip's own type accent so the
+   indicator visually inherits the chip's identity. */
+.entity-chip-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 6px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1px solid currentColor;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.entity-chip[data-resolution='loading'] .entity-chip-status {
+  opacity: 0.6;
+}
+
+.entity-chip[data-resolution='error'] {
+  border-style: dashed;
+}
+
 .panels-row {
   display: flex;
   flex-direction: column;

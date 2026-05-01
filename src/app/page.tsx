@@ -23,6 +23,22 @@ import { ComparisonSection } from './components/ComparisonSection'
  * verbatim text in the source abstract pane. This is what makes the FigureSpec
  * traceable back to its source.
  */
+/**
+ * Per-entity-name resolution state from BioRender MCP. The string keys
+ * are entity.name. The values are tagged unions for rendering decisions.
+ */
+type ResolvedIcon = {
+  name: string
+  description: string
+  assetType: string
+  placeable: boolean
+}
+type ResolutionState =
+  | { kind: 'idle' }
+  | { kind: 'loading' }
+  | { kind: 'resolved'; matches: ResolvedIcon[] }
+  | { kind: 'error'; error: string }
+
 export default function HomePage() {
   const [figureSpec, setFigureSpec] = useState<FigureSpec | null>(null)
   const [pastedText, setPastedText] = useState('')
@@ -31,11 +47,19 @@ export default function HomePage() {
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
+  // Asset resolution via BioRender MCP. Keyed by entity.name.
+  const [resolutions, setResolutions] = useState<Record<string, ResolutionState>>({})
+  const [resolveBatchStatus, setResolveBatchStatus] = useState<
+    'idle' | 'running' | 'done' | 'error'
+  >('idle')
+
   function loadMaudeExample() {
     setFigureSpec(MAUDE_2018_FIGURESPEC)
     setHoveredSpan(null)
     setPinnedSpan(null)
     setStatusMessage(null)
+    setResolutions({})
+    setResolveBatchStatus('idle')
   }
 
   // Click-to-jump handler. Clears hover so the pinned highlight wins
@@ -43,6 +67,75 @@ export default function HomePage() {
   function handleSelectSpan(span: SourceSpan) {
     setHoveredSpan(null)
     setPinnedSpan(span)
+  }
+
+  // Resolve every entity in the current FigureSpec against BioRender's
+  // production MCP connector. One request per unique entity name, run
+  // in parallel. Results populate the per-chip badges via the resolutions
+  // map. Network failures degrade gracefully (per-entity error states),
+  // never breaking the rest of the figure.
+  async function resolveAllAssets() {
+    if (!figureSpec) return
+    if (resolveBatchStatus === 'running') return
+
+    const uniqueNames = new Set<string>()
+    for (const panel of figureSpec.panels) {
+      for (const entity of panel.entities) {
+        uniqueNames.add(entity.name)
+      }
+    }
+    const names = Array.from(uniqueNames)
+
+    setResolveBatchStatus('running')
+    setResolutions((prev) => {
+      const next: Record<string, ResolutionState> = { ...prev }
+      names.forEach((n) => {
+        next[n] = { kind: 'loading' }
+      })
+      return next
+    })
+
+    const settled = await Promise.all(
+      names.map(async (name) => {
+        try {
+          const res = await fetch('/api/resolve-assets', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: name, perPage: 3 }),
+          })
+          const data: {
+            ok: boolean
+            results?: ResolvedIcon[]
+            error?: string
+          } = await res.json()
+          if (!res.ok || !data.ok) {
+            return [name, { kind: 'error', error: data.error ?? 'unknown' } as ResolutionState] as const
+          }
+          return [
+            name,
+            { kind: 'resolved', matches: data.results ?? [] } as ResolutionState,
+          ] as const
+        } catch (err) {
+          return [
+            name,
+            {
+              kind: 'error',
+              error: err instanceof Error ? err.message : 'network error',
+            } as ResolutionState,
+          ] as const
+        }
+      })
+    )
+
+    setResolutions((prev) => {
+      const next: Record<string, ResolutionState> = { ...prev }
+      for (const [name, state] of settled) {
+        next[name] = state
+      }
+      return next
+    })
+    const anyError = settled.some(([, s]) => s.kind === 'error')
+    setResolveBatchStatus(anyError ? 'error' : 'done')
   }
 
   async function generateFromPasted() {
@@ -100,6 +193,10 @@ export default function HomePage() {
       }
 
       setFigureSpec(candidate)
+      setHoveredSpan(null)
+      setPinnedSpan(null)
+      setResolutions({})
+      setResolveBatchStatus('idle')
 
       // 4. Display the server's notice (if any). Server owns the message;
       //    client just renders. When extract-api.ts ships, the same hook
@@ -156,6 +253,9 @@ export default function HomePage() {
                 figureSpec={figureSpec}
                 onHoverSpan={setHoveredSpan}
                 onSelectSpan={handleSelectSpan}
+                resolutions={resolutions}
+                resolveBatchStatus={resolveBatchStatus}
+                onResolveAssets={resolveAllAssets}
               />
               {figureSpec.source.raw_text === MAUDE_2018_FIGURESPEC.source.raw_text && (
                 <ComparisonSection />
