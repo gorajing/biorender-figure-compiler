@@ -146,17 +146,19 @@ Return ONLY a JSON object matching this shape. No preamble, no markdown code fen
 }`
 
 // ----------------------------------------------------------------------------
-// Source-span helper. Throws if quote is not a verbatim substring.
-// Same primitive as the Maude fixture's findSpan().
+// Source-span helpers.
+//
+// The model is instructed to produce verbatim quotes, but real LLM output
+// occasionally paraphrases or concatenates phrases from different sentences.
+// safeFindSpan returns null instead of throwing so the normalizer can drop
+// unresolvable items without failing the whole extraction. The hand-authored
+// Maude fixture in src/examples/ uses its own throwing findSpan because that
+// content is deterministic and any drift indicates a real bug.
 // ----------------------------------------------------------------------------
 
-function findSpan(source: string, quote: string): SourceSpan {
+function safeFindSpan(source: string, quote: string): SourceSpan | null {
   const start = source.indexOf(quote)
-  if (start === -1) {
-    throw new Error(
-      `Model produced a non-verbatim source_quote: "${quote.slice(0, 80)}..."`
-    )
-  }
+  if (start === -1) return null
   return { start, end: start + quote.length, text: quote }
 }
 
@@ -197,67 +199,169 @@ function defaultStepConnectorStyle(layout: GenPanel['layout']): FigureSpec['pane
 // ----------------------------------------------------------------------------
 
 function normalize(gen: GenFigureSpec, sourceText: string): FigureSpec {
+  // Pre-pass: build a global name -> entity-info map across all panels.
+  // Lets us resolve cross-panel relationship references by auto-cloning the
+  // entity into the referencing panel.
+  const globalEntityInfo = new Map<
+    string,
+    { type: GenPanel['entities'][0]['type']; name: string; source_quote: string }
+  >()
+  for (const genPanel of gen.panels) {
+    for (const genEntity of genPanel.entities) {
+      if (!globalEntityInfo.has(genEntity.name)) {
+        globalEntityInfo.set(genEntity.name, {
+          type: genEntity.type,
+          name: genEntity.name,
+          source_quote: genEntity.source_quote,
+        })
+      }
+    }
+  }
+
+  // Track every dropped item so we can log it. Production would surface these
+  // as warnings in the validation drawer.
+  const dropLog: string[] = []
+
   const panels: FigureSpec['panels'] = gen.panels.map((genPanel, panelIdx) => {
     const panelId = `p${panelIdx + 1}-${slugify(genPanel.title)}`
 
-    // Entities first — relationships reference them by name.
-    const entities = genPanel.entities.map((genEntity, entityIdx) => ({
-      id: `${panelId}-e${entityIdx + 1}`,
-      name: genEntity.name,
-      type: genEntity.type,
-      source_span: findSpan(sourceText, genEntity.source_quote),
-      asset_query: genEntity.name,
-    }))
-
-    // Build name -> id map for relationship resolution.
-    const nameToId = new Map<string, string>()
-    entities.forEach((e) => nameToId.set(e.name, e.id))
-
-    const relationships = genPanel.relationships.map((genRel) => {
-      const fromId = nameToId.get(genRel.from)
-      const toId = nameToId.get(genRel.to)
-      if (!fromId) {
-        throw new Error(
-          `Relationship references unknown entity name "${genRel.from}" in panel "${genPanel.title}"`
+    // Resolve each entity. Try source_quote first (verbatim substring of the
+    // input). Fall back to the entity name itself, which the prompt requires
+    // to be verbatim. Drop with a warning if neither resolves.
+    type ResolvedEntity = {
+      id: string
+      name: string
+      type: GenPanel['entities'][0]['type']
+      source_span: SourceSpan
+      asset_query: string
+    }
+    const entitiesWithSpans: ResolvedEntity[] = []
+    genPanel.entities.forEach((genEntity, entityIdx) => {
+      const span =
+        safeFindSpan(sourceText, genEntity.source_quote) ??
+        safeFindSpan(sourceText, genEntity.name)
+      if (!span) {
+        dropLog.push(
+          `Dropped entity "${genEntity.name}" in panel "${genPanel.title}": ` +
+            `neither source_quote nor name found verbatim in input.`
         )
+        return
       }
-      if (!toId) {
-        throw new Error(
-          `Relationship references unknown entity name "${genRel.to}" in panel "${genPanel.title}"`
+      entitiesWithSpans.push({
+        id: `${panelId}-e${entityIdx + 1}`,
+        name: genEntity.name,
+        type: genEntity.type,
+        source_span: span,
+        asset_query: genEntity.name,
+      })
+    })
+
+    // Local name -> id lookup for relationship resolution within this panel.
+    const localNameToId = new Map<string, string>()
+    entitiesWithSpans.forEach((e) => localNameToId.set(e.name, e.id))
+
+    // Cloned entities: when a relationship references a name not local to this
+    // panel but defined elsewhere, auto-clone the entity into this panel so
+    // the relationship can render with the proper name in the FigurePreview.
+    const clonedEntities: ResolvedEntity[] = []
+    let cloneCounter = entitiesWithSpans.length
+
+    function resolveOrClone(name: string): string | null {
+      const localId = localNameToId.get(name)
+      if (localId) return localId
+
+      const globalEntity = globalEntityInfo.get(name)
+      if (!globalEntity) return null
+
+      const span =
+        safeFindSpan(sourceText, globalEntity.source_quote) ??
+        safeFindSpan(sourceText, globalEntity.name)
+      if (!span) return null
+
+      cloneCounter += 1
+      const newId = `${panelId}-e${cloneCounter}`
+      clonedEntities.push({
+        id: newId,
+        name: globalEntity.name,
+        type: globalEntity.type,
+        source_span: span,
+        asset_query: globalEntity.name,
+      })
+      localNameToId.set(name, newId)
+      return newId
+    }
+
+    const relationships: FigureSpec['panels'][0]['relationships'] = []
+    genPanel.relationships.forEach((genRel) => {
+      const fromId = resolveOrClone(genRel.from)
+      const toId = resolveOrClone(genRel.to)
+      if (!fromId || !toId) {
+        dropLog.push(
+          `Dropped relationship "${genRel.from} ${genRel.type} ${genRel.to}" ` +
+            `in panel "${genPanel.title}": entity name not found in any panel.`
         )
+        return
       }
-      return {
+      const span = safeFindSpan(sourceText, genRel.source_quote)
+      if (!span) {
+        dropLog.push(
+          `Dropped relationship "${genRel.from} ${genRel.type} ${genRel.to}" ` +
+            `in panel "${genPanel.title}": source_quote not verbatim.`
+        )
+        return
+      }
+      relationships.push({
         from_entity_id: fromId,
         to_entity_id: toId,
         type: genRel.type,
-        source_span: findSpan(sourceText, genRel.source_quote),
+        source_span: span,
         ...(genRel.label !== undefined ? { label: genRel.label } : {}),
         connector_style: defaultConnectorStyle(genRel.type),
-      }
+      })
     })
 
-    const claims = genPanel.claims.map((genClaim) => ({
-      panel_id: panelId,
-      text: genClaim.text,
-      source_span: findSpan(sourceText, genClaim.source_quote),
-      evidence_strength: genClaim.evidence_strength,
-    }))
+    const claims: FigureSpec['panels'][0]['claims'] = []
+    genPanel.claims.forEach((genClaim) => {
+      const span = safeFindSpan(sourceText, genClaim.source_quote)
+      if (!span) {
+        dropLog.push(
+          `Dropped claim "${genClaim.text.slice(0, 60)}" in panel ` +
+            `"${genPanel.title}": source_quote not verbatim.`
+        )
+        return
+      }
+      claims.push({
+        panel_id: panelId,
+        text: genClaim.text,
+        source_span: span,
+        evidence_strength: genClaim.evidence_strength,
+      })
+    })
+
+    const allEntities = [...entitiesWithSpans, ...clonedEntities]
 
     return {
       id: panelId,
       title: genPanel.title,
       intent: genPanel.intent,
-      entities,
+      entities: allEntities,
       relationships,
       claims,
       layout: genPanel.layout,
-      biorender_queries: entities.map((e) => e.name),
+      biorender_queries: allEntities.map((e) => e.name),
       resolved_assets: [],
       input_step_ids: genPanel.input_step_ids,
       resolution_kind: 'layout_of_icons' as const,
       step_connector_style: defaultStepConnectorStyle(genPanel.layout),
     }
   })
+
+  if (dropLog.length > 0) {
+    console.warn(
+      `extract-api: lenient resolution dropped ${dropLog.length} item(s):`
+    )
+    dropLog.forEach((msg) => console.warn(`  - ${msg}`))
+  }
 
   const allPanelIds = panels.map((p) => p.id)
 
