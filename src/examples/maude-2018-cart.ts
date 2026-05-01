@@ -2,16 +2,17 @@
  * Reference fixture: Maude et al. 2018 NEJM tisagenlecleucel CAR-T trial.
  *
  * Used as:
- *   1. The Day 1 input fixture — paste this abstract into the prototype to test
- *      end-to-end extraction → validation → preview.
- *   2. The golden test target for `tests/extract.test.ts`.
- *   3. The headline demo example in the Day 4 Loom walkthrough.
+ *   1. The canonical fixture loaded by the "Load Maude 2018 CAR-T example"
+ *      button. Drives the demo's golden path end-to-end through extraction,
+ *      validation and preview.
+ *   2. The same abstract text the live API extractor (extract-api.ts) is
+ *      primarily tested against during development.
  *
- * Comparison reference for Day 4 demo:
- *   The NEJM-published PowerPoint slide deck (`nejmoa1709866.pptx`) contains
- *   Figure 1 ("Screening, Enrollment, Treatment, and Follow-up") and Figure 2
- *   ("Duration of Remission, Event-free Survival..."). Figure 1 is the natural
- *   comparison target for what FigureSpec compiles from this abstract.
+ * Comparison reference:
+ *   The NEJM-published Figure 1 ("Screening, Enrollment, Treatment, and
+ *   Follow-up") is a CONSORT trial-flow diagram. The demo's ComparisonSection
+ *   shows an original CONSORT-style diagram side-by-side with the FigureSpec
+ *   output, illustrating what each captures and what each leaves out.
  */
 
 export interface ReferenceAbstract {
@@ -69,7 +70,10 @@ Results: For this planned analysis, 75 patients received an infusion of tisagenl
 
 /**
  * Expected entities the extractor should pick up from this abstract.
- * Used by the golden test in `tests/extract.test.ts`.
+ *
+ * Documentation only. The current prototype does not import this constant;
+ * it stays as a reference list of what a correctly-extracted Maude FigureSpec
+ * should contain. A future test suite would assert against this list.
  *
  * NOTE: every name listed below is a verbatim substring of `abstract_text`.
  * The validator will reject anything that fails this check.

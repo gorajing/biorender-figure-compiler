@@ -2,9 +2,9 @@
  * Hand-authored canonical Maude 2018 CAR-T FigureSpec.
  *
  * This is the FIXTURE-mode output for `EXTRACT_MODE=fixture`. The entire
- * downstream pipeline (validate → render → hover-source-spans → export)
- * is built against this file. Day 1 demo works against this regardless of
- * whether live extraction (CLI or API) is available.
+ * downstream pipeline (validate → render → hover-source-spans) is built
+ * against this file. The demo works against this fixture regardless of
+ * whether live extraction (api or future cli mode) is available.
  *
  * Demo discipline: this fixture is loaded explicitly via the
  * "Load Maude 2018 CAR-T example" button. It is NOT silently substituted

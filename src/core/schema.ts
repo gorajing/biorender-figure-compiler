@@ -36,7 +36,9 @@ export const SourceSpanSchema = z.object({
 export type SourceSpan = z.infer<typeof SourceSpanSchema>
 
 // ---------------------------------------------------------------------------
-// Resolved BioRender asset. Day 1: mocked. Later: real BioRender MCP.
+// Resolved BioRender asset. Currently: typed interface only, with a non-invoked
+// mock in biorender-adapter-mock.ts. A production version would call BioRender's
+// real asset/template APIs (see BIORENDER_API_CONTRACT.md).
 // ---------------------------------------------------------------------------
 
 export const ResolvedAssetSchema = z.object({
@@ -49,9 +51,11 @@ export type ResolvedAsset = z.infer<typeof ResolvedAssetSchema>
 
 // ---------------------------------------------------------------------------
 // Bio-brush kinds (v1.1). Maps to BioRender's repeated-unit assets.
-// Per Dan, BioRender 101 webinar (2026-04-30):
-//   "Bio brushes provide optimal editability for biological structures
-//    composed of repeated units."
+// Per Dan, Aoki webinar (2026-03-24):
+//   "We've developed bio brushes to provide optimal editability for biological
+//    structures that are composed of repeated units. Think of membranes made
+//    of phospholipids, DNA made of nucleotides, proteins made of peptides, or
+//    even cell layers like epithelium."
 // ---------------------------------------------------------------------------
 
 export const BrushKindSchema = z.enum([
@@ -113,8 +117,9 @@ export type Entity = z.infer<typeof EntitySchema>
 // ---------------------------------------------------------------------------
 // Connector style for relationship arrows (v1).
 //
-// Per Tokarz, "Anatomy of a Figure" webinar:
-//   "Arrowheads indicate advancement, lines indicate inhibition."
+// Per BioRender's published guidance on figure conventions (Tokarz, "Anatomy
+// of a Figure" webinar): arrowheads indicate advancement; lines and blunt-ends
+// indicate inhibition. The mapping below encodes that convention.
 //
 // Default mappings (enforced by validate.ts):
 //   binds, activates, transforms_into, transports, flows_to, recognizes,
@@ -259,8 +264,12 @@ export type AccessibilityCheck = z.infer<typeof AccessibilityCheckSchema>
 // ---------------------------------------------------------------------------
 // Panel: one figure panel (v1).
 //
-// id is stable across regenerations. Used as PPTX export tag (BioRender
-// brc-15775 semantic-tag pattern).
+// id is stable across regenerations of the same input. A production version
+// would carry these IDs through to BioRender's editor and PPTX export so that
+// individual panels remain editable downstream and so re-compiling an updated
+// paper can produce a structural diff against the previous spec. BioRender's
+// public PptxGenJS fork shows comparable semantic-tag patterns (e.g. the
+// brc-15775 image-tag PR). The current prototype does not implement PPTX export.
 //
 // input_step_ids makes merge decisions EXPLICIT. This is the user-facing
 // differentiator vs. Custom Figure today (where merge decisions are hidden).
@@ -289,8 +298,11 @@ export type Panel = z.infer<typeof PanelSchema>
 //
 // BioRender's templates are first-class scientific assets with citation
 // infrastructure (APA, in-text), acknowledgement chains (creator + co-authors
-// + paper inspiration + template lineage), and stable URLs. Akiko Iwasaki has
-// 166 templates with 50K+ download counts each.
+// + paper inspiration + template lineage) and stable URLs. Top creators like
+// Akiko Iwasaki maintain dozens of published templates with download counts
+// ranging from low-thousands to tens-of-thousands per template (e.g. her
+// CTLA-4/PD-1 signaling template at 19.71K views / 8.83K downloads as of
+// April 2026).
 //
 // FigureSpec output inherits this structure so generated figures can flow
 // into the marketplace (per Aoki's "AI and community" tease).

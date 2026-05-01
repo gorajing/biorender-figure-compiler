@@ -14,7 +14,9 @@ import { ComparisonSection } from './components/ComparisonSection'
  *
  * Two-button UX (no silent fixture substitution):
  *   - Load Maude 2018 CAR-T example  -> fixture mode (always works)
- *   - Generate from pasted abstract  -> live mode (CLI/API, Day 2-3)
+ *   - Compile draft from pasted text -> live API extraction (when
+ *                                       EXTRACT_MODE=api and ANTHROPIC_API_KEY
+ *                                       are set in env), else fixture fallback
  *
  * The source-span highlight is the core provenance affordance: hovering any
  * entity, claim, or relationship in the figure pane lights up the corresponding
@@ -107,7 +109,7 @@ export default function HomePage() {
       <header className="app-header">
         <h1>BioRender Figure Compiler</h1>
         <span className="meta">
-          A renderer-aware Figure Intent Layer · prototype for the BioRender Product Builder application
+          Source-grounded paper-to-figure compiler · prototype for the BioRender Product Builder application
         </span>
       </header>
 

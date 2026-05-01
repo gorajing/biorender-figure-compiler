@@ -6,9 +6,9 @@
  * computed warnings (structural correctness checks).
  *
  * Layers:
- *   1. Verbatim source-span check  — every entity, claim, relationship.
- *   2. Structural checks            — connector_style mismatch, orphan refs.
- *   3. (Day 3+) Heuristic checks    — label density, color contrast.
+ *   1. Verbatim source-span check. Every entity, claim, relationship.
+ *   2. Structural checks. Connector_style mismatch, orphan refs, layout fit.
+ *   3. Heuristic checks (future). Label density, color contrast.
  *
  * Schema validation (Zod) happens separately at extract/load time. This
  * validator assumes the input has already passed Zod parsing.

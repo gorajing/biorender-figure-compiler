@@ -4,8 +4,9 @@ import './globals.css'
 export const metadata: Metadata = {
   title: 'BioRender Figure Compiler',
   description:
-    'A renderer-aware Figure Intent Layer that compiles paper abstracts ' +
-    'into editable, validated FigureSpec JSON for BioRender canvases.',
+    'A source-grounded FigureSpec compiler that turns paper text into an ' +
+    'editor-ready BioRender draft, with provenance and validation before ' +
+    'anything reaches the canvas.',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
