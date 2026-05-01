@@ -14,9 +14,11 @@ BioRender is shipping a family of typed compilers, each one taking a specific sc
 | ChemRender (BETA) | Chemical name / SMILES | PubChem | Chemical structure on canvas |
 | **FigureSpec (this repo)** | **Paper text / abstract** | **Source paper + Sonnet 4.6** | **Multi-panel figure spec → canvas** |
 
-Each is its own AI-assisted Smart Import. Each renders into BioRender's existing canvas. **FigureSpec is the missing slot for the most common scientific source: the paper itself.**
+Each is its own AI-assisted Smart Import. Each renders into BioRender's existing canvas. **FigureSpec tests whether paper-text-to-figure deserves the same treatment.** This prototype is the smallest artifact that lets that thesis be evaluated against real papers, not a claim that BioRender obviously needs it.
 
 > *I would not start by asking the LLM to draw. I would ask it to compile scientific intent into a BioRender-native figure spec, validate it, and only then hand it to the renderer/editor.*
+
+**The wedge it explores: a trust layer for AI-generated scientific figures.** BioRender already has the canvas, icons, export and editor. What's missing for the AI-generation surface is a typed intermediate object that carries source-span provenance, evidence-strength tagging and structural validation before anything reaches the renderer. `FigureSpec` is that object. The demo does not produce a finished visual figure. It produces an editor-ready structured draft: typed entities, claims, relationships, layout primitives and verbatim source-span anchors that BioRender's editor could render as editable components.
 
 **This prototype is a contract, not a product.** `FigureSpec` is the typed interface between AI generation and BioRender's existing editor, asset library, validation surface, and export pipeline. The demo proves the contract works end-to-end against the Maude 2018 NEJM CAR-T paper (hand-authored fixture + live extraction) and the Topalian 2012 NEJM anti-PD-1 paper (live extraction only). A production version would plug `FigureSpec` into BioRender's real APIs.
 

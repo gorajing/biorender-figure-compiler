@@ -117,7 +117,7 @@ export default function HomePage() {
         </button>
         <input
           type="text"
-          placeholder="Or paste a paper abstract..."
+          placeholder="Or paste paper text..."
           value={pastedText}
           onChange={(e) => setPastedText(e.target.value)}
         />
@@ -125,7 +125,7 @@ export default function HomePage() {
           onClick={generateFromPasted}
           disabled={loading || pastedText.trim().length === 0}
         >
-          {loading ? 'Extracting...' : 'Generate from pasted abstract'}
+          {loading ? 'Compiling...' : 'Compile draft from pasted text'}
         </button>
       </div>
 

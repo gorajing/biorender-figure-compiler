@@ -31,6 +31,7 @@ type Props = {
 export function FigurePreview({ figureSpec, onHoverSpan }: Props) {
   return (
     <div className="figure-preview">
+      <h3 className="figure-eyebrow">Compiled FigureSpec draft</h3>
       <div className="figure-title">{figureSpec.meta.title}</div>
       <div className="figure-meta">
         {figureSpec.meta.audience} · {figureSpec.meta.figure_type} · {figureSpec.panels.length} panels

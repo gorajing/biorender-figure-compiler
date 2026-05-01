@@ -286,6 +286,32 @@ body {
    Figure preview
    ──────────────────────────────────────────────────────────── */
 
+/* Figure-pane eyebrow — symmetric to .abstract-pane h3.
+   Explicitly labels the left pane as "Compiled FigureSpec draft" so
+   users don't expect a rendered figure. */
+.figure-eyebrow {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: var(--s-3);
+  padding-bottom: var(--s-2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.figure-eyebrow::before {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
 .figure-title {
   font-family: var(--font-serif);
   font-size: 26px;
