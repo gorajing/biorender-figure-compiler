@@ -141,7 +141,7 @@ The user sees the validation report BEFORE clicking "Add to canvas." Aoki's disc
 
 ### Today
 
-`Submit a template` exists in the UI. Templates flow through the 7-stage internal production pipeline (per Jerry Gu's "Anatomy of a Figure" webinar): rigorous content research, rough sketches, illustrated first draft, internal review, usability refinement, publishing, ongoing maintenance.
+`Submit a template` exists in the UI. Templates flow through a multi-stage internal production pipeline (described in Jerry Gu's "Anatomy of a Figure" webinar) spanning content research, drafting, internal review and ongoing maintenance.
 
 ### What FigureSpec needs
 
