@@ -98,14 +98,14 @@ type GenPanel = z.infer<typeof GenPanelSchema>
 // System prompt. Reuses our schema enums so Claude knows the valid values.
 // ----------------------------------------------------------------------------
 
-const SYSTEM_PROMPT = `You are a scientific figure compiler. Given a paper abstract, produce up to 3 candidate FigureSpec structures that would render as graphical abstracts.
+const SYSTEM_PROMPT = `You are a scientific figure compiler. Given a paper abstract, produce 1 high-quality candidate FigureSpec structure that would render as a graphical abstract.
 
 CRITICAL RULES:
 1. Every entity name MUST appear as a verbatim phrase in the input abstract.
 2. Every source_quote MUST be a verbatim substring of the input abstract (case-sensitive).
 3. Do NOT invent claims, entities, or relationships not supported by the abstract.
-4. The 3 candidates should differ in panel grouping (which input sections merge into which panels) and layout choice, NOT in extracted facts. They should share the same set of entities, relationships, and claims; only how those are organized into panels should vary.
-5. If the abstract is too short or too unstructured to support 3 candidates, return fewer (1-2 is acceptable).
+4. Aim for 3-6 panels covering the natural structure of the paper (e.g. patient population, intervention, mechanism, outcome, safety).
+5. Keep entities to the most informative 2-4 per panel. Do not list every term.
 
 VALID ENUM VALUES:
 - entity type: cell, protein, protein_structure, molecule, chem_structure, gene, tissue, organism, process, apparatus, repeated_unit, concept
@@ -307,8 +307,12 @@ function stripCodeFences(text: string): string {
 // Main adapter entry point.
 // ----------------------------------------------------------------------------
 
-const TIMEOUT_MS = Number(process.env.EXTRACT_API_TIMEOUT_MS) || 30_000
+// 90 seconds covers Sonnet 4.5 with full FigureSpec output (3 candidates × 5 panels
+// each can run ~3000 output tokens at ~50-100 tok/sec). Tunable via env if a
+// different model or smaller candidate count is used.
+const TIMEOUT_MS = Number(process.env.EXTRACT_API_TIMEOUT_MS) || 90_000
 const MODEL = process.env.EXTRACT_API_MODEL || 'claude-sonnet-4-5-20250929'
+const MAX_CANDIDATES = Number(process.env.EXTRACT_API_MAX_CANDIDATES) || 1
 
 export async function extractFromApi(inputText: string): Promise<GenerateFigureResponse> {
   const apiKey = process.env.ANTHROPIC_API_KEY
@@ -332,7 +336,7 @@ export async function extractFromApi(inputText: string): Promise<GenerateFigureR
         messages: [
           {
             role: 'user',
-            content: `Compile the following paper abstract into 1-3 candidate FigureSpec structures, following the rules above.\n\n---\n\n${inputText}`,
+            content: `Compile the following paper abstract into 1 high-quality FigureSpec candidate, following the rules above.\n\n---\n\n${inputText}`,
           },
         ],
       },
