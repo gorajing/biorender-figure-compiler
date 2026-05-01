@@ -326,12 +326,73 @@ body {
 .figure-meta {
   font-size: 11px;
   color: var(--muted);
-  margin-bottom: var(--s-5);
+  margin-bottom: var(--s-3);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   font-family: var(--font-mono);
-  padding-bottom: var(--s-4);
+  padding-bottom: var(--s-3);
   border-bottom: 1px solid var(--border);
+}
+
+/* Entity-type legend: small horizontal key surfacing what the chip
+   colors mean. Sits below the figure-meta line and above the panels. */
+.entity-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3);
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: var(--s-5);
+}
+
+.entity-legend-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-right: var(--s-1);
+}
+
+.entity-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.entity-legend-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+}
+
+.entity-legend-dot.protein {
+  background: var(--c-therapeutic-soft);
+  color: var(--c-therapeutic);
+}
+
+.entity-legend-dot.molecule {
+  background: var(--c-molecule-soft);
+  color: var(--c-molecule);
+}
+
+.entity-legend-dot.tissue {
+  background: var(--c-substrate-soft);
+  color: var(--c-substrate);
+}
+
+.entity-legend-dot.process {
+  background: var(--c-process-soft);
+  color: var(--c-process);
+}
+
+.entity-legend-dot.concept {
+  background: var(--surface);
+  color: var(--c-concept);
 }
 
 .panels-row {

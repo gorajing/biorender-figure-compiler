@@ -40,6 +40,7 @@ export function FigurePreview({ figureSpec, onHoverSpan, onSelectSpan }: Props) 
       <div className="figure-meta">
         {figureSpec.meta.audience} · {figureSpec.meta.figure_type} · {figureSpec.panels.length} panels
       </div>
+      <EntityTypeLegend />
       <div className="panels-row">
         {figureSpec.panels.map((panel) => (
           <PanelCard
@@ -50,6 +51,35 @@ export function FigurePreview({ figureSpec, onHoverSpan, onSelectSpan }: Props) 
           />
         ))}
       </div>
+    </div>
+  )
+}
+
+/**
+ * Legend exposing the chip color → entity-type mapping. The colors aren't
+ * confidence or validation status; they're the typed entity classification
+ * the compiler assigned. Making this visible turns the chip palette from
+ * "decorative" into "informative" and surfaces classification gaps (e.g.,
+ * an omics method classified as "process" because the schema lacks a
+ * "method" type yet).
+ */
+function EntityTypeLegend() {
+  const items: Array<{ type: string; label: string }> = [
+    { type: 'protein', label: 'cell · protein' },
+    { type: 'molecule', label: 'molecule' },
+    { type: 'tissue', label: 'tissue' },
+    { type: 'process', label: 'process' },
+    { type: 'concept', label: 'concept · organism' },
+  ]
+  return (
+    <div className="entity-legend" aria-label="entity type color legend">
+      <span className="entity-legend-label">Entity types</span>
+      {items.map(({ type, label }) => (
+        <span key={type} className="entity-legend-item">
+          <span className={`entity-legend-dot ${type}`} aria-hidden="true" />
+          {label}
+        </span>
+      ))}
     </div>
   )
 }
