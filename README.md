@@ -52,8 +52,9 @@ src/
     │   ├── FigurePreview.tsx       # panel cards, entity chips, hover-source-span
     │   ├── SourceAbstract.tsx      # right pane with mark-highlight on hover
     │   └── ComparisonSection.tsx   # CONSORT-style original SVG + commentary
-    ├── api/extract/route.ts        # POST /api/extract (paper text -> FigureSpec)
-    ├── api/resolve-assets/route.ts # POST /api/resolve-assets (entity name -> BioRender icons via MCP)
+    ├── api/extract/route.ts                    # POST /api/extract (paper text -> FigureSpec)
+    ├── api/resolve-assets/route.ts             # POST /api/resolve-assets (entity name -> BioRender icons via MCP, KV-backed self-rotation)
+    ├── api/resolve-assets-bootstrap/route.ts   # POST /api/resolve-assets-bootstrap (one-shot KV seed, secret-gated)
     ├── page.tsx
     ├── layout.tsx
     └── globals.css

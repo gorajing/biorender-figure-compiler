@@ -3,7 +3,7 @@
  *
  * One-shot route to seed the Vercel KV store with the initial
  * refresh_token (and optionally a fresh access_token). Called once
- * after KV is provisioned, then never again — the main /api/resolve-
+ * after KV is provisioned, then never again. The main /api/resolve-
  * assets route handles rotation indefinitely.
  *
  * Security: this route is gated by a shared secret in the request body

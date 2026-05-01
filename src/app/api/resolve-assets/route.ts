@@ -40,7 +40,7 @@
  *
  * Note: the MCP returns an `_id` per icon. We deliberately do NOT pass
  * it back to the client. The MCP's tool description says: "Do not show
- * the icon _id to the user — it is included for use by other tools
+ * the icon _id to the user. It is included for use by other tools
  * only." We respect that contract.
  */
 
