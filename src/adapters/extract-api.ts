@@ -162,6 +162,46 @@ function safeFindSpan(source: string, quote: string): SourceSpan | null {
   return { start, end: start + quote.length, text: quote }
 }
 
+// Two-stage entity-span resolution: find the broader source_quote region,
+// then narrow the highlighted span to the entity name within that region.
+// This makes the hover affordance read as "chip name == highlighted text"
+// instead of "chip name appears somewhere inside a longer highlighted passage."
+//
+// Resolution order (per option B in the design discussion):
+//   1. Locate the source_quote to establish the right region (handles cases
+//      where the entity name appears multiple times in the source).
+//   2. Within that region, narrow to the entity name. Use those tighter offsets.
+//   3. If the entity name isn't inside the region, fall back to highlighting
+//      the whole source_quote (still useful, just wider).
+//   4. If the source_quote isn't verbatim at all, fall back to a global search
+//      for the entity name (which the prompt requires to be verbatim).
+//   5. If neither resolves, return null and let the normalizer drop the entity.
+function resolveEntitySpan(
+  source: string,
+  entityName: string,
+  sourceQuote: string
+): SourceSpan | null {
+  const regionStart = source.indexOf(sourceQuote)
+  if (regionStart >= 0) {
+    const region = source.slice(regionStart, regionStart + sourceQuote.length)
+    const nameInRegion = region.indexOf(entityName)
+    if (nameInRegion >= 0) {
+      const start = regionStart + nameInRegion
+      return { start, end: start + entityName.length, text: entityName }
+    }
+    return {
+      start: regionStart,
+      end: regionStart + sourceQuote.length,
+      text: sourceQuote,
+    }
+  }
+  const nameStart = source.indexOf(entityName)
+  if (nameStart >= 0) {
+    return { start: nameStart, end: nameStart + entityName.length, text: entityName }
+  }
+  return null
+}
+
 // ----------------------------------------------------------------------------
 // Slugify panel titles for stable, readable IDs.
 // ----------------------------------------------------------------------------
@@ -237,9 +277,11 @@ function normalize(gen: GenFigureSpec, sourceText: string): FigureSpec {
     }
     const entitiesWithSpans: ResolvedEntity[] = []
     genPanel.entities.forEach((genEntity, entityIdx) => {
-      const span =
-        safeFindSpan(sourceText, genEntity.source_quote) ??
-        safeFindSpan(sourceText, genEntity.name)
+      const span = resolveEntitySpan(
+        sourceText,
+        genEntity.name,
+        genEntity.source_quote
+      )
       if (!span) {
         dropLog.push(
           `Dropped entity "${genEntity.name}" in panel "${genPanel.title}": ` +
@@ -273,9 +315,11 @@ function normalize(gen: GenFigureSpec, sourceText: string): FigureSpec {
       const globalEntity = globalEntityInfo.get(name)
       if (!globalEntity) return null
 
-      const span =
-        safeFindSpan(sourceText, globalEntity.source_quote) ??
-        safeFindSpan(sourceText, globalEntity.name)
+      const span = resolveEntitySpan(
+        sourceText,
+        globalEntity.name,
+        globalEntity.source_quote
+      )
       if (!span) return null
 
       cloneCounter += 1
@@ -322,11 +366,17 @@ function normalize(gen: GenFigureSpec, sourceText: string): FigureSpec {
 
     const claims: FigureSpec['panels'][0]['claims'] = []
     genPanel.claims.forEach((genClaim) => {
-      const span = safeFindSpan(sourceText, genClaim.source_quote)
+      // Prefer the claim's own text when it appears verbatim in the source.
+      // This keeps "hover claim row -> highlight matches the claim text"
+      // even when the model produced a wider source_quote for context.
+      // Fall back to the source_quote when the claim text was paraphrased.
+      const span =
+        safeFindSpan(sourceText, genClaim.text) ??
+        safeFindSpan(sourceText, genClaim.source_quote)
       if (!span) {
         dropLog.push(
           `Dropped claim "${genClaim.text.slice(0, 60)}" in panel ` +
-            `"${genPanel.title}": source_quote not verbatim.`
+            `"${genPanel.title}": neither claim text nor source_quote verbatim.`
         )
         return
       }
