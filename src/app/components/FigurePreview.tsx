@@ -12,6 +12,7 @@ import type {
 type Props = {
   figureSpec: FigureSpec
   onHoverSpan: (span: SourceSpan | null) => void
+  onSelectSpan: (span: SourceSpan) => void
 }
 
 /**
@@ -31,7 +32,7 @@ type Props = {
  * rendering (icon resolution via BioRender's asset library, SVG geometry,
  * positional layout) lives downstream of the spec in a production version.
  */
-export function FigurePreview({ figureSpec, onHoverSpan }: Props) {
+export function FigurePreview({ figureSpec, onHoverSpan, onSelectSpan }: Props) {
   return (
     <div className="figure-preview">
       <h3 className="figure-eyebrow">Compiled FigureSpec draft</h3>
@@ -41,20 +42,28 @@ export function FigurePreview({ figureSpec, onHoverSpan }: Props) {
       </div>
       <div className="panels-row">
         {figureSpec.panels.map((panel) => (
-          <PanelCard key={panel.id} panel={panel} onHoverSpan={onHoverSpan} />
+          <PanelCard
+            key={panel.id}
+            panel={panel}
+            onHoverSpan={onHoverSpan}
+            onSelectSpan={onSelectSpan}
+          />
         ))}
       </div>
     </div>
   )
 }
 
+type RowHandlers = {
+  onHoverSpan: (span: SourceSpan | null) => void
+  onSelectSpan: (span: SourceSpan) => void
+}
+
 function PanelCard({
   panel,
   onHoverSpan,
-}: {
-  panel: Panel
-  onHoverSpan: (span: SourceSpan | null) => void
-}) {
+  onSelectSpan,
+}: { panel: Panel } & RowHandlers) {
   return (
     <div className="panel-card">
       <span className="panel-id">{panel.id}</span>
@@ -64,7 +73,12 @@ function PanelCard({
       {panel.entities.length > 0 && (
         <div className="panel-entities">
           {panel.entities.map((entity) => (
-            <EntityChip key={entity.id} entity={entity} onHoverSpan={onHoverSpan} />
+            <EntityChip
+              key={entity.id}
+              entity={entity}
+              onHoverSpan={onHoverSpan}
+              onSelectSpan={onSelectSpan}
+            />
           ))}
         </div>
       )}
@@ -77,6 +91,7 @@ function PanelCard({
               relationship={rel}
               entities={panel.entities}
               onHoverSpan={onHoverSpan}
+              onSelectSpan={onSelectSpan}
             />
           ))}
         </div>
@@ -85,7 +100,12 @@ function PanelCard({
       {panel.claims.length > 0 && (
         <div className="panel-claims">
           {panel.claims.map((claim, i) => (
-            <ClaimRow key={i} claim={claim} onHoverSpan={onHoverSpan} />
+            <ClaimRow
+              key={i}
+              claim={claim}
+              onHoverSpan={onHoverSpan}
+              onSelectSpan={onSelectSpan}
+            />
           ))}
         </div>
       )}
@@ -96,16 +116,15 @@ function PanelCard({
 function EntityChip({
   entity,
   onHoverSpan,
-}: {
-  entity: Entity
-  onHoverSpan: (span: SourceSpan | null) => void
-}) {
+  onSelectSpan,
+}: { entity: Entity } & RowHandlers) {
   return (
     <span
       className={`entity-chip ${entity.type}`}
       onMouseEnter={() => onHoverSpan(entity.source_span)}
       onMouseLeave={() => onHoverSpan(null)}
-      title={`${entity.type}: ${entity.name}`}
+      onClick={() => onSelectSpan(entity.source_span)}
+      title={`${entity.type}: ${entity.name} · click to jump to source`}
     >
       {entity.name}
     </span>
@@ -116,11 +135,8 @@ function RelationshipRow({
   relationship,
   entities,
   onHoverSpan,
-}: {
-  relationship: Relationship
-  entities: Entity[]
-  onHoverSpan: (span: SourceSpan | null) => void
-}) {
+  onSelectSpan,
+}: { relationship: Relationship; entities: Entity[] } & RowHandlers) {
   const fromEntity = entities.find((e) => e.id === relationship.from_entity_id)
   const toEntity = entities.find((e) => e.id === relationship.to_entity_id)
   const fromName = fromEntity?.name ?? relationship.from_entity_id
@@ -141,7 +157,8 @@ function RelationshipRow({
       className="relationship-row"
       onMouseEnter={() => onHoverSpan(relationship.source_span)}
       onMouseLeave={() => onHoverSpan(null)}
-      title={`${relationship.type} (${relationship.connector_style})`}
+      onClick={() => onSelectSpan(relationship.source_span)}
+      title={`${relationship.type} (${relationship.connector_style}) · click to jump to source`}
     >
       <span>{fromName}</span>
       <span className="relationship-verb">{relationship.type}</span>
@@ -154,15 +171,15 @@ function RelationshipRow({
 function ClaimRow({
   claim,
   onHoverSpan,
-}: {
-  claim: Claim
-  onHoverSpan: (span: SourceSpan | null) => void
-}) {
+  onSelectSpan,
+}: { claim: Claim } & RowHandlers) {
   return (
     <div
       className="claim-row"
       onMouseEnter={() => onHoverSpan(claim.source_span)}
       onMouseLeave={() => onHoverSpan(null)}
+      onClick={() => onSelectSpan(claim.source_span)}
+      title="click to jump to source"
     >
       <span className="strength">[{claim.evidence_strength}]</span>
       {claim.text}

@@ -27,12 +27,22 @@ export default function HomePage() {
   const [figureSpec, setFigureSpec] = useState<FigureSpec | null>(null)
   const [pastedText, setPastedText] = useState('')
   const [hoveredSpan, setHoveredSpan] = useState<SourceSpan | null>(null)
+  const [pinnedSpan, setPinnedSpan] = useState<SourceSpan | null>(null)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
   function loadMaudeExample() {
     setFigureSpec(MAUDE_2018_FIGURESPEC)
+    setHoveredSpan(null)
+    setPinnedSpan(null)
     setStatusMessage(null)
+  }
+
+  // Click-to-jump handler. Clears hover so the pinned highlight wins
+  // visually for the scroll-into-view pass, then reveals the pinned span.
+  function handleSelectSpan(span: SourceSpan) {
+    setHoveredSpan(null)
+    setPinnedSpan(span)
   }
 
   async function generateFromPasted() {
@@ -142,7 +152,11 @@ export default function HomePage() {
         <div className="figure-pane">
           {figureSpec ? (
             <>
-              <FigurePreview figureSpec={figureSpec} onHoverSpan={setHoveredSpan} />
+              <FigurePreview
+                figureSpec={figureSpec}
+                onHoverSpan={setHoveredSpan}
+                onSelectSpan={handleSelectSpan}
+              />
               {figureSpec.source.raw_text === MAUDE_2018_FIGURESPEC.source.raw_text && (
                 <ComparisonSection />
               )}
@@ -167,7 +181,11 @@ export default function HomePage() {
           )}
         </div>
         {figureSpec ? (
-          <SourceAbstract text={figureSpec.source.raw_text} highlightedSpan={hoveredSpan} />
+          <SourceAbstract
+            text={figureSpec.source.raw_text}
+            hoveredSpan={hoveredSpan}
+            pinnedSpan={pinnedSpan}
+          />
         ) : (
           <div className="abstract-pane">
             <h3>Source abstract</h3>
