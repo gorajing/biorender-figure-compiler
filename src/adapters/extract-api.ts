@@ -307,11 +307,13 @@ function stripCodeFences(text: string): string {
 // Main adapter entry point.
 // ----------------------------------------------------------------------------
 
-// 90 seconds covers Sonnet 4.5 with full FigureSpec output (3 candidates × 5 panels
-// each can run ~3000 output tokens at ~50-100 tok/sec). Tunable via env if a
-// different model or smaller candidate count is used.
+// 90 seconds covers Sonnet 4.6 with full FigureSpec output (5-6 panels with
+// 15-20 entities, ~2000 output tokens at ~50-100 tok/sec). Tunable via env
+// if a different model or smaller candidate count is used.
 const TIMEOUT_MS = Number(process.env.EXTRACT_API_TIMEOUT_MS) || 90_000
-const MODEL = process.env.EXTRACT_API_MODEL || 'claude-sonnet-4-5-20250929'
+// Default to current Sonnet (4.6 as of Apr 2026). 1M context window + adaptive
+// thinking + Jan 2026 training cutoff. Tunable via env for haiku/opus swaps.
+const MODEL = process.env.EXTRACT_API_MODEL || 'claude-sonnet-4-6'
 const MAX_CANDIDATES = Number(process.env.EXTRACT_API_MAX_CANDIDATES) || 1
 
 export async function extractFromApi(inputText: string): Promise<GenerateFigureResponse> {
